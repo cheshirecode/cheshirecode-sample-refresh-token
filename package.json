@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/lib.umd.cjs",
   "module": "./dist/lib.js",
   "exports": {
@@ -18,24 +20,23 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
-  "dependencies": {
-
-  },
   "devDependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "@fieryeagle/eslint-config-react": "^0.3.0",
+    "@rushstack/eslint-patch": "^1.10.3",
     "@types/node": "^20.12.12",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
-    "@typescript-eslint/eslint-plugin": "^7.2.0",
-    "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.6",
-    "typescript": "^5.2.2",
+    "classnames": "^2.5.1",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "unocss": "^0.60.3",
     "vite": "^5.2.0",
     "vitest": "^1.6.0"
+  },
+  "resolutions": {
+    "eslint-plugin-unused-imports": "^3",
+    "@typescript-eslint/eslint-plugin": "^7"
   }
 }
