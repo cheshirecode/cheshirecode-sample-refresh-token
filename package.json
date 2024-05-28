@@ -19,12 +19,17 @@
     "typecheck": "tsc",
     "build": "vite build",
     "build:site": "SITE=1 vite build",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@fieryeagle/eslint-config-react": "^0.3.0",
     "@rushstack/eslint-patch": "^1.10.3",
+    "@types/crypto-js": "^4.2.2",
+    "@types/isomorphic-fetch": "^0.0.39",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.12.12",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
@@ -36,10 +41,17 @@
     "typescript": "^5",
     "unocss": "^0.60.3",
     "vite": "^5.2.0",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "vitest-fetch-mock": "^0.2.2",
+    "vitest-localstorage-mock": "^0.1.2"
   },
   "resolutions": {
     "eslint-plugin-unused-imports": "^3",
     "@typescript-eslint/eslint-plugin": "^7"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "isomorphic-unfetch": "^3",
+    "js-cookie": "^3.0.5"
   }
 }

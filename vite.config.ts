@@ -1,30 +1,40 @@
+/// <reference types="vitest" />
 import { resolve } from "path";
 
 import react from "@vitejs/plugin-react-swc";
 import UnoCSS from "unocss/vite";
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 
 const isSite = !!process.env.SITE;
 
-// https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig((config) => ({
   plugins: [react(), UnoCSS()],
-  build: isSite
-    ? { outDir: "site" }
-    : {
-        lib: {
-          entry: resolve(__dirname, "lib/main.ts"),
-          name: "cheshirecode-sample-refresh-token",
-          // the proper extensions will be added
-          fileName: "lib",
-        },
-        rollupOptions: {
-          external: ["react", "unocss"],
-          output: {
-            globals: {
-              react: "react",
+  build: {
+    // skip minification to make tests faster
+    minify: config.mode !== "test" ? "esbuild" : false,
+    ...(isSite
+      ? { outDir: "site" }
+      : {
+          lib: {
+            entry: resolve(__dirname, "lib/index.ts"),
+            name: "cheshirecode-sample-refresh-token",
+            // the proper extensions will be added
+            fileName: "lib",
+          },
+          rollupOptions: {
+            external: ["react", "unocss"],
+            output: {
+              globals: {
+                react: "react",
+              },
             },
           },
-        },
-      },
-});
+        }),
+  },
+  test: {
+    setupFiles: ["vitest-localstorage-mock"],
+    include: ["**/*(*.)?{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    exclude: [...configDefaults.exclude, "src/test/**/*"],
+  },
+}));

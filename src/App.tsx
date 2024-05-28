@@ -1,8 +1,18 @@
 import cx from "classnames";
 
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
+import PKCEWrapper from "../lib";
 
-function App() {
+const config = {
+  redirect_uri: location.href,
+  authz_uri: "https://interview-api.vercel.app/api/authorize",
+  token_uri: "https://interview-api.vercel.app/api/oauth/token",
+  requested_scopes: "*",
+};
+
+const AuthInstance = new PKCEWrapper(config);
+
+const App = () => {
   return (
     <div className="flex h-screen w-full">
       <div className="hidden lg:flex items-center justify-center flex-1 bg-white text-black">
@@ -24,6 +34,9 @@ function App() {
                 "dark:bg-blue-600 dark:hover:bg-blue-700 border-0",
                 "cursor-pointer",
               )}
+              onClick={() => {
+                location.href = AuthInstance.getAuthorizeUrl();
+              }}
             >
               Login
             </button>
@@ -32,6 +45,6 @@ function App() {
       </div>
     </div>
   );
-}
+};
 
 export default App;
