@@ -1,5 +1,3 @@
 export default {
-  foo: 'bar'
+  foo: "bar",
 };
-
-export const test = 1;
