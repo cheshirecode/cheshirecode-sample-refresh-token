@@ -18,7 +18,7 @@ export default defineConfig((config) => ({
       : {
           lib: {
             entry: resolve(__dirname, "lib/index.ts"),
-            name: "cheshirecode-sample-refresh-token",
+            name: "cheshirecode-pkce-wrapper",
             // the proper extensions will be added
             fileName: "lib",
           },

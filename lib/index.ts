@@ -19,7 +19,7 @@ const handleFetchResponse = async (res: Response) => {
   return error;
 };
 
-export const commonHeaders = {
+const commonHeaders = {
   Accept: "application/json",
   "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
 };
