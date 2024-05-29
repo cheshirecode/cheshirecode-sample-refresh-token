@@ -7,13 +7,20 @@
 ## Overview
 
 - `lib` has the PKCE module.
-- `src` has the example website to show how PKCE works.
+- `src` has the example website to show how PKCE works, by importing `lib` module and executes PKCE token exchange and refresh flows.
   - `App.tsx` is the main page
   - `components` has non-business logic components (so far only 1)
-  - `styles` for CSS (and maybe design tokens)
+  - `styles` for CSS (and maybe design tokens) but most stylings are done via [atomic classes](https://unocss.dev/)
   - `services` for neither styles nor components, like hooks or utilites, or test helpers.
+- Testing is done with:
+  - `vitest` as runner.
+  - `testing-library` and `jsdom` for React rendering, besides default Node env for plain JS such as `lib` module.
+  - Ideally integration over unit testing to reduce mocking surfaces and less time than E2E/headless browser setup such as BrowserStack.
 
 ## Libraries
+
+Minimal setup to leave implementation room for actual business logic:
+
 - `fetch` for consistent fetch API between browser and Node environment (for tests).
 - `dayjs` for time format.
 - `js-cookie` for consistent cookies handling between browser and Node environment (for tests).
@@ -22,6 +29,8 @@
 
 - npm i -g pnpm
 - pnpm i
+
+OR `npm i` would also work, by ignoring the commited pnpm lockfile.
 
 ## Basic commands
 
