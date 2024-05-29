@@ -19,6 +19,11 @@ const handleFetchResponse = async (res: Response) => {
   return error;
 };
 
+export const commonHeaders = {
+  Accept: "application/json",
+  "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+};
+
 export default class PKCEWrapper {
   private config: Required<PKCEConfig>;
   private codeStore: PKCEConfig["code_store"] = "cookie";
@@ -59,7 +64,6 @@ export default class PKCEWrapper {
       redirect_uri: this.config.redirect_uri,
       state: this.getState(additionalParams?.state ?? null) ?? "",
       code_challenge: this.generateCodeChallenge(),
-      client_id: this.config.client_id,
       scope: this.config.requested_scopes,
       ...additionalParams,
     };
@@ -82,15 +86,11 @@ export default class PKCEWrapper {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code: String(authResponse.code),
-        client_id: this.config.client_id,
         redirect_uri: this.config.redirect_uri,
         code_verifier: this.getCodeVerifier() ?? "",
         ...additionalParams,
       }),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
+      headers: commonHeaders,
       ...(cors
         ? {
             credentials: "include",
@@ -111,13 +111,9 @@ export default class PKCEWrapper {
       method: "POST",
       body: new URLSearchParams({
         grant_type: "refresh_token",
-        client_id: this.config.client_id,
         refresh_token: refreshToken ?? this.getRefreshToken() ?? "",
       }),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
+      headers: commonHeaders,
     });
     return handleFetchResponse(response);
   }

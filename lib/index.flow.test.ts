@@ -3,17 +3,16 @@ import createFetchMock from "vitest-fetch-mock";
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-import PKCEWrapper from ".";
+import PKCEWrapper, { commonHeaders } from ".";
 
 const config = {
-  client_id: "test_client_id",
   redirect_uri: "http://localhost/",
   authz_uri: "https://test-auth.com/auth",
   token_uri: "https://test-auth.com/token",
   requested_scopes: "*",
 };
 
-describe("Verify PKCE persisted code_verifier", () => {
+describe("PKCE code_verifier is persisted", () => {
   test("same code_verifier", () => {
     const authInstance = new PKCEWrapper(config);
     expect(authInstance.getCodeVerifier()).toEqual(
@@ -28,14 +27,13 @@ describe("Verify PKCE persisted code_verifier", () => {
   });
 });
 
-describe("Verify PKCE authorization url", () => {
-  test("build an authorization url", () => {
+describe("PKCE authz url", () => {
+  test("build an authz url", () => {
     const authInstance = new PKCEWrapper(config);
     const url = authInstance.getAuthorizeUrl();
 
     expect(url).toContain(config.authz_uri);
     expect(url).toContain("?response_type=code");
-    expect(url).toContain("&client_id=" + config.client_id);
     expect(url).toContain("&state=");
     expect(url).toContain("&scope=*");
     expect(url).toContain(
@@ -51,7 +49,6 @@ describe("Verify PKCE authorization url", () => {
 
     expect(url).toContain(config.authz_uri);
     expect(url).toContain("?response_type=code");
-    expect(url).toContain("&client_id=" + config.client_id);
     expect(url).toContain("&test_param=test");
   });
 
@@ -64,7 +61,7 @@ describe("Verify PKCE authorization url", () => {
   });
 });
 
-describe("Verify PKCE exchange code for token", () => {
+describe("PKCE exchange code for token", () => {
   let authInstance: PKCEWrapper;
   beforeEach(() => {
     authInstance = new PKCEWrapper(config);
@@ -108,10 +105,8 @@ describe("Verify PKCE exchange code for token", () => {
     await mockRequest();
     const headers = fetchMocker.mock?.calls[0][1].headers ?? {};
 
-    expect(headers["Accept"]).toEqual("application/json");
-    expect(headers["Content-Type"]).toEqual(
-      "application/x-www-form-urlencoded;charset=UTF-8",
-    );
+    expect(headers["Accept"]).toEqual(commonHeaders.Accept);
+    expect(headers["Content-Type"]).toEqual(commonHeaders["Content-Type"]);
   });
 
   test("request for exchange with body", async () => {
@@ -122,7 +117,6 @@ describe("Verify PKCE exchange code for token", () => {
 
     expect(body.get("grant_type")).toEqual("authorization_code");
     expect(body.get("code")).toEqual("123");
-    expect(body.get("client_id")).toEqual(config.client_id);
     expect(body.get("redirect_uri")).toEqual(config.redirect_uri);
     expect(body.get("code_verifier")).not.toEqual(null);
   });
@@ -168,7 +162,7 @@ describe("Verify PKCE exchange code for token", () => {
   };
 });
 
-describe("Verify PKCE refresh token", () => {
+describe("PKCE refresh token", () => {
   const refreshToken = "REFRESH_TOKEN";
 
   test("make a request to token endpoint", async () => {
@@ -182,10 +176,8 @@ describe("Verify PKCE refresh token", () => {
     await mockRequest();
     const headers = fetchMocker.mock.calls[0][1].headers ?? {};
 
-    expect(headers["Accept"]).toEqual("application/json");
-    expect(headers["Content-Type"]).toEqual(
-      "application/x-www-form-urlencoded;charset=UTF-8",
-    );
+    expect(headers["Accept"]).toEqual(commonHeaders.Accept);
+    expect(headers["Content-Type"]).toEqual(commonHeaders["Content-Type"]);
   });
 
   test("request for refresh with body", async () => {
@@ -195,7 +187,6 @@ describe("Verify PKCE refresh token", () => {
     );
 
     expect(body.get("grant_type")).toEqual("refresh_token");
-    expect(body.get("client_id")).toEqual(config.client_id);
     expect(body.get("refresh_token")).toEqual(refreshToken);
   });
 

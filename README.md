@@ -27,9 +27,10 @@
 
 - Development mode with `pnpm dev`
 - Test with `pnpm test`
-- Check coverage with `pnpm coverage`
+- Check test coverage with `pnpm coverage`
 
 ## Build(s)
 
-- Library/module build with `pnpm build`
-- Example website build with `pnpm build:site`
+- Library/module build with `pnpm build` whose output can be found in `dist` folder.
+- Example website build with `pnpm build:site` whose output can be found in `site` folder.
+- Vite's library mode is enough for the demo's scope, as monorepos would be the proper (and overkill) solution.

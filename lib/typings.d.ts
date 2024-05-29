@@ -7,10 +7,6 @@ export interface AuthResponse {
 
 export interface PKCEConfig {
   /**
-   * client_id if Auth Server requires it
-   */
-  client_id?: string;
-  /**
    * the URL for SPA redirect
    */
   redirect_uri: string;
