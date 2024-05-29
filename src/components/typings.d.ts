@@ -8,4 +8,5 @@ export type DetailsProps = BaseProps & {
   contentClassName?: string;
   labelClassName?: string;
   fieldClassName?: string;
+  skipNullValues?: boolean;
 };

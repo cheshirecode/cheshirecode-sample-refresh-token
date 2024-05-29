@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
 import Details from "./components/Details";
 import { getConfig as getAuthzConfig } from "./services/authz";
-import useOnLoad from "./services/useOnLoad";
+import { useAuthParams } from "./services/browser/useOnLoad";
 import PKCEWrapper from "../lib";
 import { TokenResponse } from "../lib/typings";
 
@@ -19,11 +19,6 @@ dayjs.extend(LocalizedFormat);
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.tz.setDefault(dayjs.tz.guess());
-
-const selectAuthParams = (l: Location) => {
-  const searchParams = new URLSearchParams(l.search);
-  return [searchParams.get("state"), searchParams.get("code")] as const;
-};
 
 const App = () => {
   const authInstance = useRef<PKCEWrapper | null>(null);
@@ -66,9 +61,14 @@ const App = () => {
     location.href = "/";
   }, []);
 
+  // (3) Handling successful authorization
+  const [codeVerifier, setCodeVerifier] = useState("");
+  const [state, code] = useAuthParams();
+
   useEffect(() => {
     // init 1 instance per component to allow logic extraction to hook or child component eventually
     authInstance.current = new PKCEWrapper(getAuthzConfig());
+    // (1) Generating code challenge and verifier - NOTE that code challenge is deferred to clicking login as there's no need to persist it unlike code verifier
     setCodeVerifier(authInstance.current?.getCodeVerifier(false) ?? "");
     const expiresAt = authInstance.current?.expiresAt;
     setParams((p) => ({
@@ -87,13 +87,10 @@ const App = () => {
       // cleanup
     };
   }, []);
-  const [codeVerifier, setCodeVerifier] = useState("");
-  const [state, code] = useOnLoad(selectAuthParams) as ReturnType<
-    typeof selectAuthParams
-  >;
 
   useEffect(() => {
     if (state && code) {
+      // (4) Code → token exchange
       const fn = async () =>
         await authInstance.current?.exchangeForAccessToken(location.href);
       fn().then((r) => saveRefreshTokenWithResponse(r));
@@ -103,9 +100,11 @@ const App = () => {
         codeVerifier: "",
       }));
     } else {
+      // (6) Token → token exchange
       const refreshToken = authInstance.current?.getRefreshToken();
       if (refreshToken) {
         const fn = async () => await authInstance.current?.refreshAccessToken();
+        // (5) Saving refresh token in localStorage
         fn().then((r) => saveRefreshTokenWithResponse(r));
       }
     }
@@ -137,6 +136,7 @@ const App = () => {
                   "cursor-pointer",
                 )}
                 onClick={() => {
+                  // (2) Authorization redirect
                   const authzUrl = authInstance.current?.getAuthorizeUrl();
                   if (authzUrl) {
                     location.href = authzUrl;

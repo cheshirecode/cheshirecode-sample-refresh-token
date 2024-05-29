@@ -3,19 +3,9 @@
  */
 
 import { renderHook, waitFor } from "@testing-library/react";
-// import { JSDOM } from "jsdom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import useOnLoad from "./useOnLoad";
-// const jsdom = new JSDOM(``, {
-//   url: `${location.href}foo?bar=1`,
-// });
-
-// beforeEach(() => {
-//   jsdom.reconfigure({
-//     url: `${location.href}foo?bar=1`,
-//   });
-// });
+import useOnLoad, { useAuthParams } from "./useOnLoad";
 
 describe("useOnLoad", () => {
   it("default to window.location", async () => {
@@ -30,6 +20,13 @@ describe("useOnLoad", () => {
     );
     await waitFor(() => {
       expect(result.current).toEqual(["http://localhost/", ""]);
+    });
+  });
+  it("useAuthParams", async () => {
+    location.href = "https://localhost?state=1&code=2";
+    const { result } = renderHook(() => useAuthParams());
+    await waitFor(() => {
+      expect(result.current).toEqual(["1", "2"]);
     });
   });
 });

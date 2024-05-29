@@ -11,6 +11,7 @@ const Details = (props: DetailsProps) => {
     fieldCopy,
     data = {},
     children,
+    skipNullValues = false,
     ...rest
   } = props;
   if (!children && Object.keys(data)?.length === 0) {
@@ -29,9 +30,13 @@ const Details = (props: DetailsProps) => {
       {children ??
         Object.keys(data).map((k) => {
           const v = data[k];
-          // if (typeof v === "undefined" || v === null || v === "") {
-          //   return null;
-          // }
+          if (
+            (skipNullValues && typeof v === "undefined") ||
+            v === null ||
+            v === ""
+          ) {
+            return null;
+          }
           const isFieldCopyPossible = fieldCopy && v;
           return (
             <div key={k} className="flex min-w-0">
