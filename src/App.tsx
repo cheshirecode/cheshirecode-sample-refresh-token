@@ -39,6 +39,7 @@ const App = () => {
       const refreshToken = String(response?.refresh_token);
       authInstance.current?.setRefreshToken(refreshToken);
       const expiresAt = response?.expires_at;
+      const expiresAtTs = dayjs(response.expires_at);
       setParams((p) => ({
         ...p,
         refreshToken,
@@ -46,10 +47,9 @@ const App = () => {
         ...(response.expires_at
           ? {
               expiresAt,
-              displayExpiresAt: dayjs(response.expires_at).format(
-                "YYYY-MM-DDTHH:mm:ssZ[Z]",
-              ),
-              displayExpiresIn: dayjs(response.expires_at).toNow(true),
+              displayExpiresAt: expiresAtTs.format("YYYY-MM-DDTHH:mm:ssZ[Z]"),
+              displayExpiresIn:
+                expiresAtTs.diff(dayjs(), "seconds") + " seconds",
             }
           : {}),
       }));
@@ -93,6 +93,7 @@ const App = () => {
     authInstance.current = new PKCEWrapper(getAuthzConfig());
 
     const expiresAt = authInstance.current?.expiresAt;
+    const expiresAtTs = dayjs(expiresAt);
     // (1) Generating code challenge and verifier - NOTE that code challenge is deferred to clicking login as there's no need to persist it unlike code verifier
     setParams((p) => ({
       ...p,
@@ -102,10 +103,8 @@ const App = () => {
       ...(expiresAt
         ? {
             expiresAt,
-            displayExpiresAt: dayjs(expiresAt).format(
-              "YYYY-MM-DDTHH:mm:ssZ[Z]",
-            ),
-            displayExpiresIn: dayjs(expiresAt).toNow(true),
+            displayExpiresAt: expiresAtTs.format("YYYY-MM-DDTHH:mm:ssZ[Z]"),
+            displayExpiresIn: expiresAtTs.diff(dayjs(), "seconds") + " seconds",
           }
         : {}),
     }));
@@ -161,6 +160,13 @@ const App = () => {
     if (isExperimental) {
       _t = setInterval(() => {
         const now = dayjs();
+        if (params.expiresAt) {
+          setParams((v) => ({
+            ...v,
+            displayExpiresIn:
+              dayjs(v.expiresAt).diff(now, "seconds") + " seconds",
+          }));
+        }
         if (
           now.isAfter(expiresAtTime) ||
           Math.abs(now.diff(expiresAtTime, "seconds")) <= 10
