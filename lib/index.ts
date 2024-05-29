@@ -48,23 +48,25 @@ export default class PKCEWrapper {
         this[y] = this.config[y as keyof PKCEConfig];
       }
     });
-
-    // immediately generate or reuse code verifier
-    this.getCodeVerifier();
   }
 
   /**
    * Generate the authorize url
    */
   public getAuthorizeUrl(
-    additionalParams: { state?: string; [key: string]: unknown } = {},
+    additionalParams: {
+      state?: string;
+      code_challenge?: string;
+      [key: string]: unknown;
+    } = {},
   ) {
     const params = {
       response_type: "code,id_token",
       redirect_uri: this.config.redirect_uri,
       state: this.getState(additionalParams?.state ?? null) ?? "",
-      code_challenge: this.generateCodeChallenge(),
       scope: this.config.requested_scopes,
+      code_challenge:
+        additionalParams.code_challenge || this.generateCodeChallenge(),
       ...additionalParams,
     };
     const queryString = new URLSearchParams(params).toString();
@@ -106,7 +108,11 @@ export default class PKCEWrapper {
    */
   public async refreshAccessToken(
     refreshToken?: string,
-  ): Promise<TokenResponse> {
+  ): Promise<TokenResponse | null> {
+    const _token = refreshToken ?? this.getRefreshToken() ?? "";
+    if (!_token) {
+      return Promise.resolve(null);
+    }
     const response = await fetch(this.config.token_uri, {
       method: "POST",
       body: new URLSearchParams({
@@ -124,6 +130,10 @@ export default class PKCEWrapper {
     const isSSL =
       typeof location !== "undefined" && location?.protocol.startsWith("https");
     const codeVerifierKey = `app.txs.${this.getState()}`;
+    // console.log("get", codeVerifierKey, generate);
+    // if (generate) {
+    //   console.trace();
+    // }
     const getNewCode = () =>
       WordArray.random(this.config.code_length).toString();
     let v: string | null | undefined;
@@ -155,8 +165,13 @@ export default class PKCEWrapper {
     const isSSL =
       typeof location !== "undefined" && location?.protocol.startsWith("https");
     const codeVerifierKey = `app.txs.${this.getState()}`;
+    // console.log("remove", codeVerifierKey);
     if (isSSL && this.codeStore === "cookie") {
-      Cookies.remove(codeVerifierKey);
+      // console.log("remove cookie");
+      Cookies.remove(codeVerifierKey, {
+        sameSite: "Strict",
+        secure: true,
+      });
     } else {
       // fallback to storage if not on SSL or not cookie mode
       this.getStore().removeItem(codeVerifierKey);

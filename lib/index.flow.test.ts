@@ -149,7 +149,6 @@ describe("PKCE exchange code for token", () => {
     const mockSuccessResponse = {
       access_token: "token",
       expires_at: 123,
-
       refresh_token: "refresh",
       scope: "*",
       token_type: "type",
@@ -192,7 +191,7 @@ describe("PKCE refresh token", () => {
 
   const mockRequest = async function () {
     const authInstance = new PKCEWrapper(config);
-
+    authInstance.setRefreshToken("old");
     const mockSuccessResponse = {
       access_token: "token",
       expires_at: 123,

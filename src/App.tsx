@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
 import Details from "./components/Details";
 import { getConfig as getAuthzConfig } from "./services/authz";
-import { useAuthParams } from "./services/browser/useOnLoad";
+import useOnLoad, { useAuthParams } from "./services/browser/useOnLoad";
 import PKCEWrapper from "../lib";
 import { TokenResponse } from "../lib/typings";
 
@@ -24,13 +24,14 @@ const App = () => {
   const authInstance = useRef<PKCEWrapper | null>(null);
   const [params, setParams] = useState<{
     codeVerifier: string;
+    codeChallenge: string;
     expiresAt?: number;
     refreshToken?: string;
     accessToken?: string;
-  }>({ codeVerifier: "" });
+  }>({ codeVerifier: "", codeChallenge: "" });
 
   const saveRefreshTokenWithResponse = useCallback(
-    (response: TokenResponse | undefined) => {
+    (response: TokenResponse | undefined | null) => {
       if (!response) {
         return;
       }
@@ -62,18 +63,21 @@ const App = () => {
   }, []);
 
   // (3) Handling successful authorization
-  const [codeVerifier, setCodeVerifier] = useState("");
   const [state, code] = useAuthParams();
+  const isExperimental = useOnLoad(
+    (l) => !!new URLSearchParams(l.search).get("isExperimental"),
+  );
 
   useEffect(() => {
     // init 1 instance per component to allow logic extraction to hook or child component eventually
     authInstance.current = new PKCEWrapper(getAuthzConfig());
-    // (1) Generating code challenge and verifier - NOTE that code challenge is deferred to clicking login as there's no need to persist it unlike code verifier
-    setCodeVerifier(authInstance.current?.getCodeVerifier(false) ?? "");
+
     const expiresAt = authInstance.current?.expiresAt;
+    // (1) Generating code challenge and verifier - NOTE that code challenge is deferred to clicking login as there's no need to persist it unlike code verifier
     setParams((p) => ({
       ...p,
-      codeVerifier: authInstance.current?.getCodeVerifier(false) ?? "",
+      codeVerifier: authInstance.current?.getCodeVerifier() ?? "",
+      codeChallenge: authInstance.current?.generateCodeChallenge() ?? "",
       refreshToken: authInstance.current?.getRefreshToken() ?? "",
       ...(expiresAt
         ? {
@@ -89,29 +93,56 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (state && code) {
+    let _t: NodeJS.Timeout;
+    // console.log("params.codeVerifier", !!params.codeVerifier);
+    if (state && code && params.codeVerifier) {
       // (4) Code → token exchange
       const fn = async () =>
         await authInstance.current?.exchangeForAccessToken(location.href);
-      fn().then((r) => saveRefreshTokenWithResponse(r));
-      authInstance.current?.removeCodeVerifier();
-      setParams((p) => ({
-        ...p,
-        codeVerifier: "",
-      }));
-    } else {
-      // (6) Token → token exchange
-      const refreshToken = authInstance.current?.getRefreshToken();
-      if (refreshToken) {
-        const fn = async () => await authInstance.current?.refreshAccessToken();
-        // (5) Saving refresh token in localStorage
-        fn().then((r) => saveRefreshTokenWithResponse(r));
+      fn().then((r) => {
+        authInstance.current?.removeCodeVerifier();
+        // console.log("cookie", authInstance.current?.getCodeVerifier(false));
+        saveRefreshTokenWithResponse(r);
+        setParams((p) => ({
+          ...p,
+          codeVerifier: "",
+        }));
+      });
+    } else if (
+      // experimental check to refresh on interval (hacky as the given token expiry is very short so it's almost every second)
+      (isExperimental &&
+        params.expiresAt &&
+        dayjs().isAfter(dayjs(params.expiresAt))) ||
+      (!state && !code)
+    ) {
+      if (isExperimental) {
+        // delay the check
+        _t = setTimeout(() => {
+          // (6) Token → token exchange
+          const fn = async () =>
+            await authInstance.current?.refreshAccessToken();
+          // (5) Saving refresh token in localStorage
+          fn().then((r) => saveRefreshTokenWithResponse(r));
+        }, 5000);
+        return;
       }
+      // (6) Token → token exchange
+      const fn = async () => await authInstance.current?.refreshAccessToken();
+      // (5) Saving refresh token in localStorage
+      fn().then((r) => saveRefreshTokenWithResponse(r));
     }
     return () => {
       // cleanup
+      clearTimeout(_t);
     };
-  }, [state, code, codeVerifier, saveRefreshTokenWithResponse]);
+  }, [
+    state,
+    code,
+    params.codeVerifier,
+    saveRefreshTokenWithResponse,
+    isExperimental,
+    params.expiresAt,
+  ]);
 
   return (
     <div className="flex h-screen w-full">
@@ -137,7 +168,9 @@ const App = () => {
                 )}
                 onClick={() => {
                   // (2) Authorization redirect
-                  const authzUrl = authInstance.current?.getAuthorizeUrl();
+                  const authzUrl = authInstance.current?.getAuthorizeUrl({
+                    code_challenge: params.codeChallenge,
+                  });
                   if (authzUrl) {
                     location.href = authzUrl;
                   }

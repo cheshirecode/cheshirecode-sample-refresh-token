@@ -40,6 +40,7 @@ describe("Verify PKCE live authz", () => {
 describe("Verify PKCE live token refresh", () => {
   test("make refresh request", async () => {
     const authInstance = new PKCEWrapper(config);
+    authInstance.setRefreshToken("old");
     const res = await authInstance.refreshAccessToken();
     expect(res).toHaveProperty("access_token");
     expect(res).toHaveProperty("refresh_token");

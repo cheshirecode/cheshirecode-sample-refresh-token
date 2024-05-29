@@ -28,7 +28,8 @@ describe("main App", () => {
   });
 
   it("on redirected URL with state and code", async () => {
-    location.href = `https://localhost/?state=${localStorage.getItem("pkce_state")}&code=ygo9jssbmmvgokjwuqx5`;
+    const code = "ygo9jssbmmvgokjwuqx5";
+    location.href = `https://localhost/?state=${localStorage.getItem("pkce_state")}&code=${code}`;
     const renderedApp = render(<App />);
 
     const mockSuccessResponse = {
@@ -39,14 +40,14 @@ describe("main App", () => {
       token_type: "type",
     };
     fetchMocker.mockResponseOnce(JSON.stringify(mockSuccessResponse));
-    const refreshTokenEle =
-      await renderedApp.findByTestId("refreshToken-value");
-    expect(refreshTokenEle.innerHTML).toEqual(
-      mockSuccessResponse.refresh_token,
-    );
+    const stateEle = await renderedApp.findByTestId("state-value");
+    expect(stateEle.innerHTML).toEqual(localStorage.getItem("pkce_state"));
+    const codeEle = await renderedApp.findByTestId("code-value");
+    expect(codeEle.innerHTML).toEqual(code);
   });
 
   it("should refresh token", async () => {
+    localStorage.setItem("refresh_token", "old");
     const renderedApp = render(<App />);
     const mockSuccessResponse = {
       access_token: "token",
