@@ -146,17 +146,16 @@ const App = () => {
 
   useEffect(() => {
     let _t: NodeJS.Timeout;
-    const expiresAtTime = dayjs(params.expiresAt);
-    if (isExperimental) {
+    if (isExperimental && params.refreshToken) {
+      const expiresAtTime = dayjs(params.expiresAt);
       _t = setInterval(() => {
         const now = dayjs();
-        if (params.expiresAt) {
-          setParams((v) => ({
-            ...v,
-            displayExpiresIn:
-              dayjs(v.expiresAt).diff(now, "seconds") + " seconds",
-          }));
-        }
+        setParams((v) => ({
+          ...v,
+          displayExpiresIn:
+            dayjs(v.expiresAt).diff(now, "seconds") + " seconds",
+        }));
+
         if (
           now.isAfter(expiresAtTime) ||
           Math.abs(now.diff(expiresAtTime, "seconds")) <= 10
@@ -168,7 +167,12 @@ const App = () => {
     return () => {
       clearTimeout(_t);
     };
-  }, [refreshAccessToken, isExperimental, params.expiresAt]);
+  }, [
+    refreshAccessToken,
+    isExperimental,
+    params.refreshToken,
+    params.expiresAt,
+  ]);
 
   return (
     <div className="flex h-screen w-full">
