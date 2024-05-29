@@ -251,7 +251,7 @@ const App = () => {
                 state,
                 code,
                 ...params,
-                refreshTokenSetCounter: refreshTokenSetCounter?.current,
+                // refreshTokenSetCounter: refreshTokenSetCounter?.current,
               }}
               fieldCopy
               fieldClassName="break-all"
