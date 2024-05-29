@@ -1,6 +1,6 @@
 # Sample PKCE with Refresh Token Rotation
 
-[Live demo](https://marvelous-cheesecake-c2f667.netlify.app/) for PKCE flow with refresh token rotation. There will be either a `Login` button for authorization redirect or `Logout` if there is already a stored Refresh Token. There is token exchange on page reload (with auto-refresh mechanism to come). Codes and tokens are stored in cookies and LocalStorage by default.
+[Live demo](https://marvelous-cheesecake-c2f667.netlify.app/) for PKCE flow with refresh token rotation. There will be either a `Login` button for authorization redirect or `Logout` if there is already a stored Refresh Token. There is a toggle to count down and refresh token just before expiry (or immediately, if already expired). Codes and tokens are stored in cookies and LocalStorage by default.
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/fd7ef859-c484-4db3-99be-e143ff1ed188/deploy-status)](https://app.netlify.com/sites/marvelous-cheesecake-c2f667/deploys)
 
