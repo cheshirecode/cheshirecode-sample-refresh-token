@@ -2,7 +2,6 @@
 import cx from "classnames";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
-import relativeTime from "dayjs/plugin/relativeTime";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,7 +13,6 @@ import { useAuthParams } from "./services/browser/useOnLoad";
 import PKCEWrapper from "../lib";
 import { TokenResponse } from "../lib/typings";
 
-dayjs.extend(relativeTime);
 dayjs.extend(LocalizedFormat);
 dayjs.extend(utc);
 dayjs.extend(timezone);
