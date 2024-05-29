@@ -4,7 +4,7 @@ import { resolve } from "path";
 import react from "@vitejs/plugin-react-swc";
 import UnoCSS from "unocss/vite";
 import { defineConfig } from "vite";
-import { configDefaults } from "vitest/config";
+import { configDefaults, coverageConfigDefaults } from "vitest/config";
 
 const isSite = !!process.env.SITE;
 
@@ -35,6 +35,13 @@ export default defineConfig((config) => ({
   test: {
     setupFiles: ["vitest-localstorage-mock"],
     include: ["**/*(*.)?{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    exclude: [...configDefaults.exclude, "src/test/**/*"],
+    exclude: [...configDefaults.exclude, "src/test/**/*", "site/**/*"],
+    coverage: {
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        "src/test/**/*",
+        "site/**/*",
+      ],
+    },
   },
 }));
