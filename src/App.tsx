@@ -5,12 +5,13 @@ import LocalizedFormat from "dayjs/plugin/localizedFormat";
 import relativeTime from "dayjs/plugin/relativeTime";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { debounce, throttle } from "lodash-es";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
 import Details from "./components/Details";
 import { getConfig as getAuthzConfig } from "./services/authz";
-import useOnLoad, { useAuthParams } from "./services/browser/useOnLoad";
+import { useAuthParams } from "./services/browser/useOnLoad";
 import PKCEWrapper from "../lib";
 import { TokenResponse } from "../lib/typings";
 
@@ -45,8 +46,10 @@ const App = () => {
         ...(response.expires_at
           ? {
               expiresAt,
-              displayExpiresAt: dayjs(response.expires_at).format("LLLLZ"),
-              displayExpiresIn: dayjs(expiresAt).toNow(),
+              displayExpiresAt: dayjs(response.expires_at).format(
+                "YYYY-MM-DDTHH:mm:ssZ[Z]",
+              ),
+              displayExpiresIn: dayjs(response.expires_at).toNow(true),
             }
           : {}),
       }));
@@ -64,8 +67,25 @@ const App = () => {
 
   // (3) Handling successful authorization
   const [state, code] = useAuthParams();
-  const isExperimental = useOnLoad(
-    (l) => !!new URLSearchParams(l.search).get("isExperimental"),
+  const [isExchangeFlow, setIsExchangeFlow] = useState(false);
+  const [isExperimental, setIsExperimental] = useState(
+    localStorage.getItem("__is_experimental") === "true",
+  );
+  const refreshTokenSetCounter = useRef<number | null>(0);
+  const refreshToken = useCallback(async () => {
+    // (6) Token → token exchange
+    const r = await authInstance.current?.refreshAccessToken();
+    // (5) Saving refresh token in localStorage
+    saveRefreshTokenWithResponse(r);
+    refreshTokenSetCounter.current++;
+  }, [saveRefreshTokenWithResponse]);
+  const throttledRefreshToken = useMemo(
+    () => throttle(refreshToken, 250, { leading: true }),
+    [refreshToken],
+  );
+  const debounceRefreshToken = useMemo(
+    () => debounce(refreshToken, 1000, { leading: true }),
+    [refreshToken],
   );
 
   useEffect(() => {
@@ -82,8 +102,10 @@ const App = () => {
       ...(expiresAt
         ? {
             expiresAt,
-            displayExpiresAt: dayjs(expiresAt).format("LLLLZ"),
-            displayExpiresIn: dayjs(expiresAt).toNow(),
+            displayExpiresAt: dayjs(expiresAt).format(
+              "YYYY-MM-DDTHH:mm:ssZ[Z]",
+            ),
+            displayExpiresIn: dayjs(expiresAt).toNow(true),
           }
         : {}),
     }));
@@ -93,9 +115,15 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    let _t: NodeJS.Timeout;
+    const _isExchange = !!(state && code && params.codeVerifier);
+    if (_isExchange !== isExchangeFlow) {
+      setIsExchangeFlow(_isExchange);
+    }
+  }, [code, isExchangeFlow, params.codeVerifier, state]);
+
+  useEffect(() => {
     // console.log("params.codeVerifier", !!params.codeVerifier);
-    if (state && code && params.codeVerifier) {
+    if (isExchangeFlow) {
       // (4) Code → token exchange
       const fn = async () =>
         await authInstance.current?.exchangeForAccessToken(location.href);
@@ -108,41 +136,44 @@ const App = () => {
           codeVerifier: "",
         }));
       });
-    } else if (
-      // experimental check to refresh on interval (hacky as the given token expiry is very short so it's almost every second)
-      (isExperimental &&
-        params.expiresAt &&
-        dayjs().isAfter(dayjs(params.expiresAt))) ||
-      (!state && !code)
-    ) {
-      if (isExperimental) {
-        // delay the check
-        _t = setTimeout(() => {
-          // (6) Token → token exchange
-          const fn = async () =>
-            await authInstance.current?.refreshAccessToken();
-          // (5) Saving refresh token in localStorage
-          fn().then((r) => saveRefreshTokenWithResponse(r));
-        }, 5000);
-        return;
-      }
-      // (6) Token → token exchange
-      const fn = async () => await authInstance.current?.refreshAccessToken();
-      // (5) Saving refresh token in localStorage
-      fn().then((r) => saveRefreshTokenWithResponse(r));
     }
     return () => {
       // cleanup
-      clearTimeout(_t);
     };
-  }, [
-    state,
-    code,
-    params.codeVerifier,
-    saveRefreshTokenWithResponse,
-    isExperimental,
-    params.expiresAt,
-  ]);
+  }, [isExchangeFlow, saveRefreshTokenWithResponse]);
+
+  useEffect(() => {
+    if (!isExchangeFlow) {
+      if (refreshTokenSetCounter.current > 0) {
+        return;
+      }
+      throttledRefreshToken();
+    }
+    return () => {
+      // cleanup
+      throttledRefreshToken.cancel();
+    };
+  }, [isExchangeFlow, throttledRefreshToken]);
+
+  useEffect(() => {
+    let _t: NodeJS.Timeout;
+    const expiresAtTime = dayjs(params.expiresAt);
+    if (isExperimental) {
+      _t = setInterval(() => {
+        const now = dayjs();
+        if (
+          now.isAfter(expiresAtTime) ||
+          Math.abs(now.diff(expiresAtTime, "seconds")) <= 10
+        ) {
+          debounceRefreshToken();
+        }
+      }, 1000);
+    }
+    return () => {
+      clearTimeout(_t);
+      debounceRefreshToken.cancel();
+    };
+  }, [debounceRefreshToken, isExperimental, params.expiresAt]);
 
   return (
     <div className="flex h-screen w-full">
@@ -171,6 +202,7 @@ const App = () => {
                   const authzUrl = authInstance.current?.getAuthorizeUrl({
                     code_challenge: params.codeChallenge,
                   });
+
                   if (authzUrl) {
                     location.href = authzUrl;
                   }
@@ -195,6 +227,28 @@ const App = () => {
                 Logout
               </button>
             )}
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                value=""
+                className="sr-only peer"
+                checked={isExperimental}
+                onChange={(e) => {
+                  const v = e.currentTarget.checked;
+                  setIsExperimental(() => {
+                    localStorage?.setItem(
+                      "__is_experimental",
+                      v ? "true" : "false",
+                    );
+                    return v;
+                  });
+                }}
+              />
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                Refresh token if expired or is expiring soon
+              </span>
+            </label>
           </h1>
           <section className="break-all">
             <Details
@@ -202,6 +256,7 @@ const App = () => {
                 state,
                 code,
                 ...params,
+                // refreshTokenSetCounter: refreshTokenSetCounter?.current,
               }}
               fieldCopy
               fieldClassName="break-all"

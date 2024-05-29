@@ -70,7 +70,6 @@ export default class PKCEWrapper {
       ...additionalParams,
     };
     const queryString = new URLSearchParams(params).toString();
-
     return `${this.config.authz_uri}?${queryString}`;
   }
 
