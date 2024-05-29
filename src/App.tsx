@@ -5,8 +5,7 @@ import LocalizedFormat from "dayjs/plugin/localizedFormat";
 import relativeTime from "dayjs/plugin/relativeTime";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
-import { debounce, throttle } from "lodash-es";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
 import Details from "./components/Details";
@@ -72,21 +71,13 @@ const App = () => {
     localStorage.getItem("__is_experimental") === "true",
   );
   const refreshTokenSetCounter = useRef<number | null>(0);
-  const refreshToken = useCallback(async () => {
+  const refreshAccessToken = useCallback(async () => {
     // (6) Token → token exchange
     const r = await authInstance.current?.refreshAccessToken();
     // (5) Saving refresh token in localStorage
     saveRefreshTokenWithResponse(r);
     refreshTokenSetCounter.current++;
   }, [saveRefreshTokenWithResponse]);
-  const throttledRefreshToken = useMemo(
-    () => throttle(refreshToken, 250, { leading: true }),
-    [refreshToken],
-  );
-  const debounceRefreshToken = useMemo(
-    () => debounce(refreshToken, 1000, { leading: true }),
-    [refreshToken],
-  );
 
   useEffect(() => {
     // init 1 instance per component to allow logic extraction to hook or child component eventually
@@ -94,7 +85,7 @@ const App = () => {
 
     const expiresAt = authInstance.current?.expiresAt;
     const expiresAtTs = dayjs(expiresAt);
-    // (1) Generating code challenge and verifier - NOTE that code challenge is deferred to clicking login as there's no need to persist it unlike code verifier
+    // (1) Generating code challenge and verifier
     setParams((p) => ({
       ...p,
       codeVerifier: authInstance.current?.getCodeVerifier() ?? "",
@@ -114,6 +105,9 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    // decide whether this should be an exchange flow or refresh flow
+    // and React Effecst aren't super easy to follow so ideally 2 flows should mean 2 pages/routes
+    // or composite states be moved into atomic store to lift them out of the current component (alas this is a demo so TBD)
     const _isExchange = !!(state && code && params.codeVerifier);
     if (_isExchange !== isExchangeFlow) {
       setIsExchangeFlow(_isExchange);
@@ -121,7 +115,6 @@ const App = () => {
   }, [code, isExchangeFlow, params.codeVerifier, state]);
 
   useEffect(() => {
-    // console.log("params.codeVerifier", !!params.codeVerifier);
     if (isExchangeFlow) {
       // (4) Code → token exchange
       const fn = async () =>
@@ -146,13 +139,12 @@ const App = () => {
       if (refreshTokenSetCounter.current > 0) {
         return;
       }
-      throttledRefreshToken();
+      refreshAccessToken();
     }
     return () => {
       // cleanup
-      throttledRefreshToken.cancel();
     };
-  }, [isExchangeFlow, throttledRefreshToken]);
+  }, [isExchangeFlow, refreshAccessToken]);
 
   useEffect(() => {
     let _t: NodeJS.Timeout;
@@ -171,15 +163,14 @@ const App = () => {
           now.isAfter(expiresAtTime) ||
           Math.abs(now.diff(expiresAtTime, "seconds")) <= 10
         ) {
-          debounceRefreshToken();
+          refreshAccessToken();
         }
       }, 1000);
     }
     return () => {
       clearTimeout(_t);
-      debounceRefreshToken.cancel();
     };
-  }, [debounceRefreshToken, isExperimental, params.expiresAt]);
+  }, [refreshAccessToken, isExperimental, params.expiresAt]);
 
   return (
     <div className="flex h-screen w-full">
@@ -262,7 +253,7 @@ const App = () => {
                 state,
                 code,
                 ...params,
-                // refreshTokenSetCounter: refreshTokenSetCounter?.current,
+                refreshTokenSetCounter: refreshTokenSetCounter?.current,
               }}
               fieldCopy
               fieldClassName="break-all"
