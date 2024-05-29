@@ -1,4 +1,5 @@
 import "vitest-localstorage-mock";
+import "vitest-location-mock";
 import "@testing-library/jest-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
@@ -11,7 +12,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
-
 // https://jestjs.io/docs/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "matchMedia", {

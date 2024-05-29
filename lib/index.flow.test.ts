@@ -16,9 +16,15 @@ const config = {
 describe("Verify PKCE persisted code_verifier", () => {
   test("same code_verifier", () => {
     const authInstance = new PKCEWrapper(config);
-    expect(authInstance.generateCodeVerifier()).toEqual(
-      authInstance.generateCodeVerifier(),
+    expect(authInstance.getCodeVerifier()).toEqual(
+      authInstance.getCodeVerifier(),
     );
+  });
+  test("delete code_verifier, then generate again", () => {
+    const authInstance = new PKCEWrapper(config);
+    authInstance.removeCodeVerifier();
+    expect(authInstance.getCodeVerifier(false)).toEqual(null);
+    expect(authInstance.getCodeVerifier()).not.toEqual(null);
   });
 });
 
@@ -133,20 +139,23 @@ describe("Verify PKCE exchange code for token", () => {
 
   test("CORS is enabled", async () => {
     // enable cors credentials
-    await mockRequest({});
+    await mockRequest({}, true);
     expect(fetchMocker.mock.calls[0][1]?.mode).toEqual("cors");
     expect(fetchMocker.mock.calls[0][1]?.credentials).toEqual("include");
   });
 
-  const mockRequest = async function (additionalParams: object = {}) {
+  const mockRequest = async function (
+    additionalParams: object = {},
+    cors = false,
+  ) {
     localStorage.setItem("pkce_state", "teststate");
     const url = "https://test-auth.com?state=teststate&code=123";
     // const authInstance = new PKCEWrapper(config);
 
     const mockSuccessResponse = {
       access_token: "token",
-      expires_in: 123,
-      refresh_expires_in: 234,
+      expires_at: 123,
+
       refresh_token: "refresh",
       scope: "*",
       token_type: "type",
@@ -155,7 +164,7 @@ describe("Verify PKCE exchange code for token", () => {
     fetchMocker.resetMocks();
     fetchMocker.mockResponseOnce(JSON.stringify(mockSuccessResponse));
 
-    await authInstance.exchangeForAccessToken(url, additionalParams);
+    await authInstance.exchangeForAccessToken(url, additionalParams, cors);
   };
 });
 
@@ -195,8 +204,7 @@ describe("Verify PKCE refresh token", () => {
 
     const mockSuccessResponse = {
       access_token: "token",
-      expires_in: 123,
-      refresh_expires_in: 234,
+      expires_at: 123,
       refresh_token: "refresh",
       scope: "*",
       token_type: "type",

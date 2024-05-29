@@ -1,34 +1,119 @@
+/* eslint-disable import/no-named-as-default-member */
 import cx from "classnames";
-import { useEffect, useRef, useState } from "react";
+import dayjs from "dayjs";
+import LocalizedFormat from "dayjs/plugin/localizedFormat";
+import relativeTime from "dayjs/plugin/relativeTime";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
+import Details from "./components/Details";
+import { getConfig as getAuthzConfig } from "./services/authz";
 import useOnLoad from "./services/useOnLoad";
 import PKCEWrapper from "../lib";
+import { TokenResponse } from "../lib/typings";
 
-const config = {
-  redirect_uri: location.href,
-  authz_uri: "https://interview-api.vercel.app/api/authorize",
-  token_uri: "https://interview-api.vercel.app/api/oauth/token",
-  requested_scopes: "*",
+dayjs.extend(relativeTime);
+dayjs.extend(LocalizedFormat);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.tz.setDefault(dayjs.tz.guess());
+
+const selectAuthParams = (l: Location) => {
+  const searchParams = new URLSearchParams(l.search);
+  return [searchParams.get("state"), searchParams.get("code")] as const;
 };
 
-const AuthInstance = new PKCEWrapper(config);
-
 const App = () => {
-  const _window = useOnLoad();
-  const _params = useRef<{ state: string | null; code: string | null }>({
-    state: null,
-    code: null,
-  });
-  const [params, setParams] = useState<{ state: string; code: string }>({
-    state: "",
-    code: "",
-  });
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    _params.current.state = searchParams.get("state");
-    _params.current.code = searchParams.get("code");
+  const authInstance = useRef<PKCEWrapper | null>(null);
+  const [params, setParams] = useState<{
+    codeVerifier: string;
+    expiresAt?: number;
+    refreshToken?: string;
+    accessToken?: string;
+  }>({ codeVerifier: "" });
+
+  const saveRefreshTokenWithResponse = useCallback(
+    (response: TokenResponse | undefined) => {
+      if (!response) {
+        return;
+      }
+      const refreshToken = String(response?.refresh_token);
+      authInstance.current?.setRefreshToken(refreshToken);
+      const expiresAt = response?.expires_at;
+      setParams((p) => ({
+        ...p,
+        refreshToken,
+        accessToken: response?.access_token,
+        ...(response.expires_at
+          ? {
+              expiresAt,
+              displayExpiresAt: dayjs(response.expires_at).format("LLLLZ"),
+              displayExpiresIn: dayjs(expiresAt).toNow(),
+            }
+          : {}),
+      }));
+    },
+    [],
+  );
+
+  const logout = useCallback(() => {
+    authInstance.current?.setRefreshToken("");
+    if (authInstance.current) {
+      authInstance.current.expiresAt = 0;
+    }
+    location.href = "/";
   }, []);
+
+  useEffect(() => {
+    // init 1 instance per component to allow logic extraction to hook or child component eventually
+    authInstance.current = new PKCEWrapper(getAuthzConfig());
+    setCodeVerifier(authInstance.current?.getCodeVerifier(false) ?? "");
+    const expiresAt = authInstance.current?.expiresAt;
+    setParams((p) => ({
+      ...p,
+      codeVerifier: authInstance.current?.getCodeVerifier(false) ?? "",
+      refreshToken: authInstance.current?.getRefreshToken() ?? "",
+      ...(expiresAt
+        ? {
+            expiresAt,
+            displayExpiresAt: dayjs(expiresAt).format("LLLLZ"),
+            displayExpiresIn: dayjs(expiresAt).toNow(),
+          }
+        : {}),
+    }));
+    return () => {
+      // cleanup
+    };
+  }, []);
+  const [codeVerifier, setCodeVerifier] = useState("");
+  const [state, code] = useOnLoad(selectAuthParams) as ReturnType<
+    typeof selectAuthParams
+  >;
+
+  useEffect(() => {
+    if (state && code) {
+      const fn = async () =>
+        await authInstance.current?.exchangeForAccessToken(location.href);
+      fn().then((r) => saveRefreshTokenWithResponse(r));
+      authInstance.current?.removeCodeVerifier();
+      setParams((p) => ({
+        ...p,
+        codeVerifier: "",
+      }));
+    } else {
+      const refreshToken = authInstance.current?.getRefreshToken();
+      if (refreshToken) {
+        const fn = async () => await authInstance.current?.refreshAccessToken();
+        fn().then((r) => saveRefreshTokenWithResponse(r));
+      }
+    }
+    return () => {
+      // cleanup
+    };
+  }, [state, code, codeVerifier, saveRefreshTokenWithResponse]);
+
   return (
     <div className="flex h-screen w-full">
       <div className="hidden lg:flex items-center justify-center flex-1 bg-white text-black">
@@ -36,27 +121,59 @@ const App = () => {
           <img src={loginImg} alt="login" height={490} width={640} />
         </div>
       </div>
-      <div className="w-full bg-gray-100 lg:w-1/2 flex items-center justify-center">
-        <div className="max-w-md w-full p-6">
+      <div className="w-full bg-gray-100 lg:w-2/3 flex flex-col">
+        <div className="max-h-1/4 lg:hidden bg-white top-0">
+          <img src={loginImg} alt="login" className="w-full h-full" />
+        </div>
+        <div className="p-6 flex-1 flex flex-col justify-center">
           <h1 className="text-3xl font-semibold mb-6 text-black text-center">
-            Unauth
+            {!params.refreshToken && (
+              <button
+                type="button"
+                className={cx(
+                  "text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg",
+                  "text-xl px-5 py-2.5 me-2 mb-2",
+                  "border-0",
+                  "cursor-pointer",
+                )}
+                onClick={() => {
+                  const authzUrl = authInstance.current?.getAuthorizeUrl();
+                  if (authzUrl) {
+                    location.href = authzUrl;
+                  }
+                }}
+                data-testid="btn-login"
+              >
+                Login
+              </button>
+            )}
+            {params.refreshToken && (
+              <button
+                type="button"
+                className={cx(
+                  "text-white bg-gray-700 hover:bg-gray-800 font-medium rounded-lg",
+                  "text-xl px-5 py-2.5 me-2 mb-2",
+                  "border-0",
+                  "cursor-pointer",
+                )}
+                onClick={logout}
+                data-testid="btn-logout"
+              >
+                Logout
+              </button>
+            )}
           </h1>
-          <div className="mt-4 text-sm text-gray-600 text-center">
-            <button
-              type="button"
-              className={cx(
-                "text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg",
-                "text-sm px-5 py-2.5 me-2 mb-2",
-                "dark:bg-blue-600 dark:hover:bg-blue-700 border-0",
-                "cursor-pointer",
-              )}
-              onClick={() => {
-                location.href = AuthInstance.getAuthorizeUrl();
+          <section className="break-all">
+            <Details
+              data={{
+                state,
+                code,
+                ...params,
               }}
-            >
-              Login
-            </button>
-          </div>
+              fieldCopy
+              fieldClassName="break-all"
+            />
+          </section>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ const subscribe = (callback: () => void) => {
     window?.removeEventListener("load", callback);
   };
 };
-const _selector = (x: unknown) => x;
+const _selector: (x: typeof window.location) => unknown = (x) => x;
 
 export default function useOnLoad(selector = _selector) {
   const _location = useSyncExternalStore(subscribe, getSnapshot);

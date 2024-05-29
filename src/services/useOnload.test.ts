@@ -29,7 +29,7 @@ describe("useOnLoad", () => {
       useOnLoad((l) => [(l as Location).href, (l as Location).search]),
     );
     await waitFor(() => {
-      expect(result.current).toEqual(["http://localhost:3000/", ""]);
+      expect(result.current).toEqual(["http://localhost/", ""]);
     });
   });
 });

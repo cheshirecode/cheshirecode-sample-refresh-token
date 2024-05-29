@@ -50,14 +50,14 @@
     "vite": "^5.2.0",
     "vitest": "^1.6.0",
     "vitest-fetch-mock": "^0.2.2",
-    "vitest-localstorage-mock": "^0.1.2"
+    "vitest-localstorage-mock": "^0.1.2",
+    "vitest-location-mock": "^1.0.4"
   },
   "resolutions": {
     "eslint-plugin-unused-imports": "^3",
     "@typescript-eslint/eslint-plugin": "^7"
   },
   "dependencies": {
-    "@emotion/styled": "^11.11.5",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.11",
     "isomorphic-unfetch": "^3",

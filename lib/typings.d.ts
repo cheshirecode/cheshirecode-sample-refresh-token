@@ -29,13 +29,18 @@ export interface PKCEConfig {
    * where to store code_*
    */
   code_store?: "cookie" | "StorageAPI";
+  /**
+   * keys for persisting certain items in Storage to be overwritten
+   */
+  stateKey?: string;
+  refreshTokenKey?: string;
+  expiresAtKey?: string;
 }
 
 export interface TokenResponse {
   access_token: string;
-  expires_in: number;
-  refresh_expires_in: number;
+  expires_at: number;
   refresh_token: string;
-  scope: string;
   token_type: string;
+  scope: string;
 }

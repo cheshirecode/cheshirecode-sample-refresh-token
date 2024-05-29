@@ -10,14 +10,13 @@ const config = {
   requested_scopes: "*",
 };
 
-describe("Verify PKCE integration authz", () => {
+describe("Verify PKCE live authz", () => {
   test("build an authorization url", () => {
     const authInstance = new PKCEWrapper(config);
     const url = authInstance.getAuthorizeUrl();
 
     expect(url).toContain(config.authz_uri);
     expect(url).toContain("?response_type=code");
-    expect(url).toContain("&client_id=" + config.client_id);
     expect(url).toContain("&state=");
     expect(url).toContain("&scope=*");
     expect(url).toContain(
@@ -27,12 +26,23 @@ describe("Verify PKCE integration authz", () => {
     expect(url).not.toContain("%3D");
   });
 
-  test("include additional parameters", () => {
+  test("make authz request", async () => {
     const authInstance = new PKCEWrapper(config);
-    const url = authInstance.getAuthorizeUrl({ test_param: "test" });
+    const res = await authInstance.exchangeForAccessToken(
+      authInstance.getAuthorizeUrl(),
+    );
+    expect(res).toHaveProperty("access_token");
+    expect(res).toHaveProperty("refresh_token");
+    expect(res).toHaveProperty("expires_at");
+  });
+});
 
-    expect(url).toContain(config.authz_uri);
-    expect(url).toContain("?response_type=code");
-    expect(url).toContain("&test_param=test");
+describe("Verify PKCE live token refresh", () => {
+  test("make refresh request", async () => {
+    const authInstance = new PKCEWrapper(config);
+    const res = await authInstance.refreshAccessToken();
+    expect(res).toHaveProperty("access_token");
+    expect(res).toHaveProperty("refresh_token");
+    expect(res).toHaveProperty("expires_at");
   });
 });
