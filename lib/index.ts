@@ -41,13 +41,14 @@ export default class PKCEWrapper {
     }
     // little hack to allow overriding of <value>Key in order to allow multiple instances with different sets of state + tokens
     // such as multiple Authz Servers
-    Object.keys(this.config).forEach((x) => {
-      if (x.endsWith("Key") && Object.hasOwn(this, x)) {
-        const y = x as unknown as Exclude<keyof PKCEWrapper, "expiresAt">;
-        // @ts-ignore
-        this[y] = this.config[y as keyof PKCEConfig];
-      }
-    });
+    const keys = this.getKeys();
+    Object.keys(this.config)
+      .filter((x) => keys.includes(x))
+      .forEach((x) => {
+        const y = x as unknown as Exclude<keyof typeof this, "expiresAt">;
+        // @ts-expect-error
+        this[y] = this.config[y as keyof typeof this.config];
+      });
   }
 
   /**
@@ -253,11 +254,17 @@ export default class PKCEWrapper {
   private getStore() {
     return this.config.storage;
   }
+
+  public getKeys() {
+    return [...Object.keys(this)].filter(
+      (x) => x.endsWith("Key") && Object.hasOwn(this, x),
+    );
+  }
   /**
    * helper function to verify .storage is working, with a callback to clean up
    */
   public testStore(key: string): () => void {
-    if ([this.stateKey].includes(key)) {
+    if (this.getKeys().includes(key)) {
       throw RangeError(`This Storage key ${key} is reserved internally`);
     }
     this.getStore().setItem(key, "dummy");
