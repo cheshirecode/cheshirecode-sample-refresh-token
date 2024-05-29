@@ -36,17 +36,19 @@ const App = () => {
       const refreshToken = String(response?.refresh_token);
       authInstance.current?.setRefreshToken(refreshToken);
       const expiresAt = response?.expires_at;
-      const expiresAtTs = dayjs(response.expires_at);
+      const expiresAtDayjs = dayjs(expiresAt);
       setParams((p) => ({
         ...p,
         refreshToken,
         accessToken: response?.access_token,
-        ...(response.expires_at
+        ...(expiresAt
           ? {
               expiresAt,
-              displayExpiresAt: expiresAtTs.format("YYYY-MM-DDTHH:mm:ssZ[Z]"),
+              displayExpiresAt: expiresAtDayjs.format(
+                "YYYY-MM-DDTHH:mm:ssZ[Z]",
+              ),
               displayExpiresIn:
-                expiresAtTs.diff(dayjs(), "seconds") + " seconds",
+                expiresAtDayjs.diff(dayjs(), "seconds") + " seconds",
             }
           : {}),
       }));
@@ -147,7 +149,7 @@ const App = () => {
   useEffect(() => {
     let _t: NodeJS.Timeout;
     if (isExperimental && params.refreshToken) {
-      const expiresAtTime = dayjs(params.expiresAt);
+      const expiresAtDayjs = dayjs(params.expiresAt);
       _t = setInterval(() => {
         const now = dayjs();
         setParams((v) => ({
@@ -157,8 +159,8 @@ const App = () => {
         }));
 
         if (
-          now.isAfter(expiresAtTime) ||
-          Math.abs(now.diff(expiresAtTime, "seconds")) <= 10
+          now.isAfter(expiresAtDayjs) ||
+          Math.abs(now.diff(expiresAtDayjs, "seconds")) <= 10
         ) {
           refreshAccessToken();
         }
