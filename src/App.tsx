@@ -1,6 +1,8 @@
 import cx from "classnames";
+import { useEffect, useRef, useState } from "react";
 
 import loginImg from "./assets/login.svg"; // https://undraw.co/illustrations
+import useOnLoad from "./services/useOnLoad";
 import PKCEWrapper from "../lib";
 
 const config = {
@@ -13,6 +15,20 @@ const config = {
 const AuthInstance = new PKCEWrapper(config);
 
 const App = () => {
+  const _window = useOnLoad();
+  const _params = useRef<{ state: string | null; code: string | null }>({
+    state: null,
+    code: null,
+  });
+  const [params, setParams] = useState<{ state: string; code: string }>({
+    state: "",
+    code: "",
+  });
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    _params.current.state = searchParams.get("state");
+    _params.current.code = searchParams.get("code");
+  }, []);
   return (
     <div className="flex h-screen w-full">
       <div className="hidden lg:flex items-center justify-center flex-1 bg-white text-black">

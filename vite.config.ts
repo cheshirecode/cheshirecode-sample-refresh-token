@@ -33,7 +33,8 @@ export default defineConfig((config) => ({
         }),
   },
   test: {
-    setupFiles: ["vitest-localstorage-mock"],
+    globals: true,
+    setupFiles: ["src/services/test/setup.ts"],
     include: ["**/*(*.)?{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     exclude: [...configDefaults.exclude, "src/test/**/*", "site/**/*"],
     coverage: {
