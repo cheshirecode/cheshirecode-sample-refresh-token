@@ -42,4 +42,9 @@ jobs:
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
-    - run: pnpm coverage
+
+    - name: Test coverage
+      run: pnpm coverage
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2

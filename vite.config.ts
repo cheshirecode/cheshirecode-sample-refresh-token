@@ -43,6 +43,13 @@ export default defineConfig((config) => ({
         "src/test/**/*",
         "site/**/*",
       ],
+      reporter: [
+        ["lcov", { projectRoot: "./src" }],
+        ["json", { file: "coverage.json" }],
+        ["text"],
+        ["html", { subdir: "./html" }],
+      ],
+      provider: "v8",
     },
   },
 }));
