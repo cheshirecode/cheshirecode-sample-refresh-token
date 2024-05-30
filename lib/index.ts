@@ -3,6 +3,7 @@ import "isomorphic-unfetch";
 import Cookies from "js-cookie";
 
 import { AuthResponse, PKCEConfig, TokenResponse } from "./typings";
+import { commonHeaders } from "./utils";
 
 const handleFetchResponse = async (res: Response) => {
   // 200 response
@@ -18,12 +19,6 @@ const handleFetchResponse = async (res: Response) => {
   // return something instead of throwing error so that down the line, we can process all errors in 1 place
   return error;
 };
-
-const commonHeaders = {
-  Accept: "application/json",
-  "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-};
-
 export default class PKCEWrapper {
   private config: Required<PKCEConfig>;
   private codeStore: PKCEConfig["code_store"] = "cookie";

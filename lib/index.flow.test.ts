@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
+
+import { commonHeaders } from "./utils";
+
+import PKCEWrapper from ".";
+
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
-
-import PKCEWrapper, { commonHeaders } from ".";
 
 const config = {
   redirect_uri: "http://localhost/",
