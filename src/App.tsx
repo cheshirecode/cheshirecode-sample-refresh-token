@@ -19,7 +19,12 @@ dayjs.extend(timezone);
 dayjs.tz.setDefault(dayjs.tz.guess());
 
 const App = () => {
+  // per-component instance of PKCE handler
   const authInstance = useRef<PKCEWrapper | null>(null);
+  // store internal state (which map to some stored values in Cookies or LocalStorage, to let React re-renders take place naturally
+  // without having to fiddle with Cookies and localStorage event listener
+  // note - localStorage event emitter doesn't work on the same page anyway https://developer.mozilla.org/en-US/docs/Web/API/Window/storage_event
+  // but it is a good extension to track changes across multiple pages in the same browser
   const [params, setParams] = useState<{
     codeVerifier: string;
     codeChallenge: string;
@@ -67,12 +72,16 @@ const App = () => {
   // (3) Handling successful authorization
   const [state, code] = useAuthParams();
   const [isExchangeFlow, setIsExchangeFlow] = useState(false);
+  // experimental flag which is currently only used to trigger token auto-refresh
   const [isExperimental, setIsExperimental] = useState(
     localStorage.getItem("__is_experimental") === "true",
   );
+  // counter to keep track of how many times token refresh occurs
   const refreshTokenSetCounter = useRef<number | null>(0);
+
+  // dedicated fn to use refresh token to get new access token to isolate and possibly modify it with
+  // throttle/debounce etc
   const refreshAccessToken = useCallback(async () => {
-    // (6) Token → token exchange
     const r = await authInstance.current?.refreshAccessToken();
     // (5) Saving refresh token in localStorage
     saveRefreshTokenWithResponse(r);
@@ -115,6 +124,7 @@ const App = () => {
   }, [code, isExchangeFlow, params.codeVerifier, state]);
 
   useEffect(() => {
+    // if exchange flow is detected
     if (isExchangeFlow) {
       // (4) Code → token exchange
       const fn = async () =>
@@ -135,10 +145,12 @@ const App = () => {
   }, [isExchangeFlow, saveRefreshTokenWithResponse]);
 
   useEffect(() => {
+    // if not an exchange flow
     if (!isExchangeFlow) {
       if (refreshTokenSetCounter.current > 0) {
         return;
       }
+      // (6) Token → token exchange
       refreshAccessToken();
     }
     return () => {
@@ -148,8 +160,12 @@ const App = () => {
 
   useEffect(() => {
     let _t: NodeJS.Timeout;
+    // if 'refresh token' toggle is checked and there is a stored refresh token
     if (isExperimental && params.refreshToken) {
       const expiresAtDayjs = dayjs(params.expiresAt);
+      // do a check every second to see if the expiry time is 10s away (or already passed)
+      // then trigger (6). This has a side effect of showing a countdown timer
+      // which is pretty neat as long as token lasts at least 15-20s
       _t = setInterval(() => {
         const now = dayjs();
         setParams((v) => ({
