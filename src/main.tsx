@@ -1,3 +1,5 @@
+// not going to test this unless E2E
+/* c8 ignore next 20 */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 

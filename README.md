@@ -7,12 +7,14 @@
 - For 'logged in' users (supposedly with refresh token), there will be `Logout` button to clear token and go back to login.
 - There is a toggle to count down and refresh token just before expiry (or immediately, if already expired). Without auto-refresh, token refresh takes place on page load.
 - Codes and tokens are stored in cookies and LocalStorage by default.
+- __Experimental__ automagic token refresh with a toggle.
+- __Experimental__ due to React's Effects, there might be multiple invocations of the same requests and may cause the component to re-render few times so there's AbortController to try and cancel other requests.
 
 ## Overview
 
 - `lib` has the PKCE module.
 - `src` has the example website to show how PKCE works, by importing `lib` module and executes PKCE token exchange and refresh flows.
-  - `App.tsx` is the main page
+  - `App.tsx` is the main page that followed the PKCE RTR flow
   - `components` has non-business logic components (so far only 1)
   - `styles` for CSS (and maybe design tokens) but most stylings are done via [atomic classes](https://unocss.dev/)
   - `services` for neither styles nor components, like hooks or utilites, or test helpers.

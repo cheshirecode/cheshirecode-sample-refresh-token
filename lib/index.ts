@@ -8,13 +8,16 @@ import { commonHeaders } from "./utils";
 const handleFetchResponse = async (res: Response) => {
   // 200 response
   /* c8 ignore next 8 */
+  let _error: null | Error = null;
   try {
     if (res.ok) {
       return await res?.json();
     }
-  } catch (e) {}
+  } catch (e) {
+    _error = e as Error;
+  }
   // very hard to test error handling
-  const error: ErrorHttp = new Error(res.statusText); // non-2xx HTTP responses into errors
+  const error: ErrorHttp = new Error(_error ? _error.message : res.statusText); // non-2xx HTTP responses into errors
   error.status = res.status;
   // return something instead of throwing error so that down the line, we can process all errors in 1 place
   return error;
@@ -25,6 +28,11 @@ export default class PKCEWrapper {
   private stateKey = "pkce_state";
   private refreshTokenKey = "refresh_token";
   private expiresAtKey = "expires_at";
+  // new feature to allow aborting of URL-based request
+  private abortControllerMap: Record<string, AbortController> = {};
+  private isAbortControllerSupported =
+    typeof window !== "undefined" &&
+    typeof window.AbortController !== "undefined";
 
   constructor(config: PKCEConfig) {
     this.config = Object.assign({}, config) as typeof this.config;
@@ -78,7 +86,11 @@ export default class PKCEWrapper {
     cors = false,
   ): Promise<TokenResponse> {
     const authResponse = await this.parseAuthResponseUrl(url);
-    const response = await fetch(this.config.token_uri, {
+    const uri = this.config.token_uri;
+    if (this.isAbortControllerSupported && !this.abortControllerMap[uri]) {
+      this.abortControllerMap[uri] = new AbortController();
+    }
+    const response = await fetch(uri, {
       method: "POST",
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -94,6 +106,9 @@ export default class PKCEWrapper {
             mode: "cors",
           }
         : {}),
+      ...(this.isAbortControllerSupported
+        ? { signal: this.abortControllerMap[uri].signal }
+        : {}),
     });
     return handleFetchResponse(response);
   }
@@ -108,13 +123,20 @@ export default class PKCEWrapper {
     if (!_token) {
       return Promise.resolve(null);
     }
-    const response = await fetch(this.config.token_uri, {
+    const uri = this.config.token_uri;
+    if (this.isAbortControllerSupported && !this.abortControllerMap[uri]) {
+      this.abortControllerMap[uri] = new AbortController();
+    }
+    const response = await fetch(uri, {
       method: "POST",
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken ?? this.getRefreshToken() ?? "",
       }),
       headers: commonHeaders,
+      ...(this.isAbortControllerSupported
+        ? { signal: this.abortControllerMap[uri].signal }
+        : {}),
     });
     return handleFetchResponse(response);
   }
@@ -258,7 +280,7 @@ export default class PKCEWrapper {
   /**
    * helper function to verify .storage is working, with a callback to clean up
    */
-  public testStore(key: string): () => void {
+  public testStore(key: string) {
     if (this.getKeys().includes(key)) {
       throw RangeError(`This Storage key ${key} is reserved internally`);
     }
@@ -266,5 +288,13 @@ export default class PKCEWrapper {
     return () => {
       this.getStore().removeItem(key);
     };
+  }
+
+  public abort(key: string) {
+    this.isAbortControllerSupported && this.abortControllerMap[key]?.abort();
+  }
+
+  public deleteController(key: string) {
+    this.isAbortControllerSupported && delete this.abortControllerMap[key];
   }
 }
