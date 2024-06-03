@@ -7,7 +7,7 @@ import { commonHeaders } from "./utils";
 
 const handleFetchResponse = async (res: Response) => {
   // 200 response
-  /* c8 ignore next 8 */
+  /* c8 ignore next 13 */
   let _error: null | Error = null;
   try {
     if (res.ok) {

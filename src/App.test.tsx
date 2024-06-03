@@ -31,6 +31,7 @@ describe("main App", () => {
     const code = "ygo9jssbmmvgokjwuqx5";
     location.href = `https://localhost/?state=${localStorage.getItem("pkce_state")}&code=${code}`;
     const renderedApp = render(<App />);
+    const user = userEvent.setup();
 
     const mockSuccessResponse = {
       access_token: "token",
@@ -43,6 +44,7 @@ describe("main App", () => {
     const stateEle = await renderedApp.findByTestId("state-value");
     expect(stateEle.innerHTML).toEqual(localStorage.getItem("pkce_state"));
     const codeEle = await renderedApp.findByTestId("code-value");
+    await user.click(codeEle);
     expect(codeEle.innerHTML).toEqual(code);
   });
 

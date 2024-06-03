@@ -36,13 +36,9 @@ export default defineConfig((config) => ({
     globals: true,
     setupFiles: ["src/services/test/setup.ts"],
     include: ["**/*(*.)?{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    exclude: [...configDefaults.exclude, "src/test/**/*", "site/**/*"],
+    exclude: [...configDefaults.exclude, "site/**/*"],
     coverage: {
-      exclude: [
-        ...coverageConfigDefaults.exclude,
-        "src/test/**/*",
-        "site/**/*",
-      ],
+      exclude: [...coverageConfigDefaults.exclude, "site/**/*"],
       reporter: [
         ["lcov", { projectRoot: "./src" }],
         ["json", { file: "coverage.json" }],

@@ -15,6 +15,7 @@ export default function createOnClickCopyToClipboard(
     }
     const n =
       navigator?.clipboard &&
+      navigator.permissions?.query &&
       (await navigator.permissions.query({
         // @ts-expect-error
         name: "clipboard-write",
