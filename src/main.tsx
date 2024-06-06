@@ -4,8 +4,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 /* eslint-disable sort-imports */
-import "./styles/index.css";
-import "./styles/reset.css";
+import "@/styles/index.css";
+import "@/styles/reset.css";
 /* eslint-enable sort-imports */
 import "virtual:uno.css";
 // uno
