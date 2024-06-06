@@ -1,7 +1,8 @@
 import cx from "classnames";
 
+import createOnClickCopyToClipboard from "@/services/browser/createOnClickCopyToClipboard";
+
 import type { DetailsProps } from "./typings";
-import createOnClickCopyToClipboard from "../services/browser/createOnClickCopyToClipboard";
 
 const Details = (props: DetailsProps) => {
   const {
