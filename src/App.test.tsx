@@ -7,8 +7,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 
+import { getConfig as getAuthzConfig } from "@/services/authz";
+
 import App from "./App";
-import { getConfig as getAuthzConfig } from "./services/authz";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
